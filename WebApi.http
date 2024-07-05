@@ -1,0 +1,8 @@
+@WebApi_HostAddress = http://localhost:5000
+
+# Richiesta di esempio GET per film
+GET {{WebApi_HostAddress}}/api/film
+Accept: application/json
+
+# Aggiungi altre richieste di esempio se necessario
+###
