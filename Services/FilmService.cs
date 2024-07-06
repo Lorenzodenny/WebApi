@@ -8,18 +8,20 @@ namespace WebApi.Services
     public class FilmService
     {
         private readonly Container<Film> _filmContainer;
-
+        private bool _isInitializing;
         public FilmService()
         {
+            _isInitializing = true;
             _filmContainer = new Container<Film>();
-            ConfigureLogging(isProduction: true);
+            SetupLogging(isProduction: true);
             InitializeFilms();
+            _isInitializing = false;
         }
 
-        private void ConfigureLogging(bool isProduction)
+        private void SetupLogging(bool isProduction)
         {
-            _filmContainer.LogAction = LogHelper.Log;
             LogHelper.ConfigureLogging(isProduction);
+            _filmContainer.LogAction = LogHelper.Log; 
         }
 
         private void InitializeFilms()
@@ -34,10 +36,42 @@ namespace WebApi.Services
             _filmContainer.AddItem(new FilmStorico("Braveheart", 1995, "Storico", "Mel Gibson"));
         }
 
-        public List<Film> GetRecentFilms()
+        public void PrintAllFilms()
         {
-            return _filmContainer.FindFilms(film => film.Anno > 2010);
+            string presentazione = "\nLA LISTA DEI FILM AGGIORNATA è LA SEGUENTE :\n";
+            _filmContainer.LogAction.Invoke(presentazione);
+            foreach (var film in _filmContainer.GetAllItems())
+            {
+                string filmDetails = $"Film: {film.Titolo}, Anno: {film.Anno}, Genere: {film.Genere}";
+                _filmContainer.LogAction?.Invoke(filmDetails);
+            }
         }
+
+        public List<Film> FilterFilms(string genere, int? anno)
+        {
+            IEnumerable<Film> filtered = _filmContainer.GetAllItems();
+
+            if (!string.IsNullOrEmpty(genere))
+            {
+                filtered = filtered.Where(f => f.Genere.Equals(genere, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (anno.HasValue)
+            {
+                filtered = filtered.Where(f => f.Anno == anno.Value);
+            }
+
+            return filtered.ToList(); 
+        }
+
+
+
+
+        public List<Film> GetFilmsByYear(int year)
+        {
+            return _filmContainer.FindFilms(film => film.Anno > year);
+        }
+        
 
         public List<Film> GetAllFilms()
         {
@@ -52,15 +86,55 @@ namespace WebApi.Services
         public bool AddFilm(Film film)
         {
             _filmContainer.AddItem(film);
+            PrintAllFilms();
             return true;
         }
 
-        public bool DeleteFilm(int id)
+        public bool UpdateFilm(int id, Film updatedFilm)
         {
-            Film film = GetFilmById(id);
+            var film = GetFilmById(id);
             if (film != null)
             {
-                _filmContainer.RemoveItem(film);
+                // Aggiorna le proprietà comuni
+                film.Titolo = updatedFilm.Titolo;
+                film.Anno = updatedFilm.Anno;
+                film.Genere = updatedFilm.Genere;
+
+                // Aggiorna proprietà specifiche in base al tipo
+                if (film is IHasRegista filmWithDirector && updatedFilm is IHasRegista updatedFilmWithDirector)
+                {
+                    filmWithDirector.Regista = updatedFilmWithDirector.Regista;
+                }
+                else if (film is Documentario doc && updatedFilm is Documentario updatedDoc)
+                {
+                    doc.Narratore = updatedDoc.Narratore;
+                }
+                else if (film is FilmAnimazione anim && updatedFilm is FilmAnimazione updatedAnim)
+                {
+                    anim.StudioAnimazione = updatedAnim.StudioAnimazione;
+                }
+
+                // Chiamata a UpdateItem per eseguire l'aggiornamento e loggare l'azione
+                _filmContainer.UpdateItem(id, updatedFilm);
+
+                PrintAllFilms();
+                return true;
+            }
+            return false;
+        }
+
+        // Nuovo metodo che utilizza Func
+        public List<int> CalculateFilmTitleLengths()
+        {
+            return _filmContainer.ApplyFunction(film => film.Titolo.Length);
+        }
+
+        public bool DeleteFilm(int index)
+        {
+            if (index >= 0 && index < _filmContainer.GetAllItems().Count)
+            {
+                _filmContainer.RemoveItem(index);
+                PrintAllFilms();
                 return true;
             }
             return false;
