@@ -2,6 +2,7 @@
 using WebApi.Generics;
 using WebApi.Model;
 using WebApi.Model.Static;
+using WebApi.ModelDTO;
 
 namespace WebApi.Services
 {
@@ -47,7 +48,7 @@ namespace WebApi.Services
             }
         }
 
-        public List<Film> FilterFilms(string genere, int? anno)
+        public List<FilmDto> FilterFilms(string genere, int? anno, string creatore)
         {
             IEnumerable<Film> filtered = _filmContainer.GetAllItems();
 
@@ -61,8 +62,27 @@ namespace WebApi.Services
                 filtered = filtered.Where(f => f.Anno == anno.Value);
             }
 
-            return filtered.ToList(); 
+            if (!string.IsNullOrEmpty(creatore))
+            {
+                filtered = filtered.Where(f => (f as IHasRegista)?.Regista == creatore ||
+                                               (f as Documentario)?.Narratore == creatore ||
+                                               (f as FilmAnimazione)?.StudioAnimazione == creatore);
+            }
+
+            return filtered.Select(f => new FilmDto
+            {
+                Titolo = f.Titolo,
+                Anno = f.Anno,
+                Genere = f.Genere,
+                Tipologia = (int)f.Tipologia, 
+                Creatore = (f as IHasRegista)?.Regista ??
+                           (f as Documentario)?.Narratore ??
+                           (f as FilmAnimazione)?.StudioAnimazione
+            }).ToList();
         }
+
+
+
 
 
 

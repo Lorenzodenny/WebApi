@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.Json;
 using WebApi.Model.Static;
 using WebApi.Services;
+using WebApi.ModelDTO;
 
 namespace WebApi.Controllers
 {
@@ -50,11 +51,11 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Film>> Get([FromQuery] string genere = null, [FromQuery] int? anno = null)
+        public ActionResult<IEnumerable<FilmDto>> Get([FromQuery] string genere = null, [FromQuery] int? anno = null, [FromQuery] string creatore = null)
         {
             try
             {
-                var films = _filmService.FilterFilms(genere, anno);
+                var films = _filmService.FilterFilms(genere, anno, creatore);
                 return Ok(films);
             }
             catch (Exception ex)
@@ -62,6 +63,8 @@ namespace WebApi.Controllers
                 return StatusCode(500, $"Internal server error {ex.Message}");
             }
         }
+
+
 
 
 
