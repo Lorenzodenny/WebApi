@@ -1,4 +1,7 @@
+using WebApi.MiddleWare;
 using WebApi.Services;
+using WebApi.Design_Pattern.Factory;
+using WebApi.Abstract;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +19,8 @@ builder.Services.AddSwaggerGen(c =>
 
 // Registra il FilmService nel container di Dependency Injection
 builder.Services.AddScoped<FilmService>();
+// Registra la FilmFactory come implementazione di IFilmFactory
+builder.Services.AddScoped<IFilmFactory, FilmFactory>();
 
 var app = builder.Build();
 
@@ -29,6 +34,9 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = "swagger"; // Cambia a "swagger" se vuoi accedere tramite /swagger
     });
 }
+
+// Middleware personalizzato
+app.UseMiddleware<MyCustomMiddleware>();
 
 // app.UseHttpsRedirection(); // Commenta questa linea
 

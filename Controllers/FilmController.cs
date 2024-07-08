@@ -8,6 +8,8 @@ using System.Text.Json;
 using WebApi.Model.Static;
 using WebApi.Services;
 using WebApi.ModelDTO;
+using MyAppConfig = WebApi.Design_Pattern.Singleton.MyAppConfigurationManager;
+using WebApi.Design_Pattern.Factory;
 
 namespace WebApi.Controllers
 {
@@ -20,7 +22,8 @@ namespace WebApi.Controllers
         Fantascienza,
         Horror,
         Animazione,
-        Storico
+        Storico,
+        SerieTV
     }
 
     [Route("api/[controller]")]
@@ -28,25 +31,33 @@ namespace WebApi.Controllers
     public class FilmController : ControllerBase
     {
         private readonly FilmService _filmService;
+        private readonly IFilmFactory _filmFactory;
 
-        public FilmController(FilmService filmService)
+
+        // Dependency Injection
+        public FilmController(FilmService filmService, IFilmFactory filmFactory)
         {
             _filmService = filmService;
+            _filmFactory = filmFactory;
         }
 
 
-        [HttpGet("RecentFilms/{year}")]
-        public ActionResult<List<Film>> ListFilmsByYear(int year)
+        [HttpGet("RecentFilms")]
+        public ActionResult<List<Film>> ListFilmsByYear([FromQuery] int? year)
         {
-            var films = _filmService.GetFilmsByYear(year);
+            int yearToUse = year ?? int.Parse(MyAppConfig.Instance.GetSetting("default_year_filter"));
+            var films = _filmService.GetFilmsByYear(yearToUse);
+            ControllerHelpers.SetCacheHeader(Response, 3600);
             return Ok(films);
         }
+
 
         // endpoint che utilizza il metodo con Func
         [HttpGet("FilmTitleLengths")]
         public ActionResult<List<int>> GetFilmTitleLengths()
         {
             var titleLengths = _filmService.CalculateFilmTitleLengths();
+            ControllerHelpers.SetCacheHeader(Response, 600);
             return Ok(titleLengths);
         }
 
@@ -56,6 +67,7 @@ namespace WebApi.Controllers
             try
             {
                 var films = _filmService.FilterFilms(genere, anno, creatore);
+                ControllerHelpers.SetCacheHeader(Response, 300);
                 return Ok(films);
             }
             catch (Exception ex)
@@ -78,6 +90,7 @@ namespace WebApi.Controllers
                 {
                     return NotFound();
                 }
+                ControllerHelpers.SetCacheHeader(Response, 1200);
                 return Ok(film);
             }
             catch (Exception ex)
@@ -104,14 +117,6 @@ namespace WebApi.Controllers
 
         }
 
-        //{
-        //  "titolo": "Planet Earth II",
-        //  "anno": 2016,
-        //  "genere": "Natura",
-        //  "tipologia": "Documentario",
-        //  "narratore": "David Attenborough"
-        //}
-
 
         [HttpPost]
         public ActionResult<Film> Post([FromBody] JsonElement filmData)
@@ -122,33 +127,17 @@ namespace WebApi.Controllers
                 int anno = filmData.GetProperty("anno").GetInt32();
                 string genere = filmData.GetProperty("genere").GetString();
                 string tipologiaString = filmData.GetProperty("tipologia").GetString();
+                Tipologia tipologia = Enum.Parse<Tipologia>(tipologiaString, true);
 
-                Tipologia tipologia;
-                if (!Enum.TryParse<Tipologia>(tipologiaString, true, out tipologia))
-                {
-                    return BadRequest("Tipologia non valida.");
-                }
+                string creatore = ControllerHelpers.ExtractCreator(filmData, tipologia);
+                int numeroEpisodi = filmData.TryGetProperty("numeroEpisodi", out var episodiValue) ? episodiValue.GetInt32() : 0;
+                int numeroStagioni = filmData.TryGetProperty("numeroStagioni", out var stagioniValue) ? stagioniValue.GetInt32() : 0;
 
-                // Estrapolazione delle proprietà comuni
-                string regista = filmData.TryGetProperty("regista", out var registaValue) ? registaValue.GetString() : null;
-                string narratore = filmData.TryGetProperty("narratore", out var narratoreValue) ? narratoreValue.GetString() : null;
-                string studioAnimazione = filmData.TryGetProperty("studioAnimazione", out var studioValue) ? studioValue.GetString() : null;
-
-                Film nuovoFilm = tipologia switch
-                {
-                    Tipologia.Azione => new FilmAzione(titolo, anno, genere, regista),
-                    Tipologia.Commedia => new FilmCommedia(titolo, anno, genere, regista),
-                    Tipologia.Drammatico => new FilmDrammatico(titolo, anno, genere, regista),
-                    Tipologia.Fantascienza => new FilmFantascienza(titolo, anno, genere, regista),
-                    Tipologia.Horror => new FilmHorror(titolo, anno, genere, regista),
-                    Tipologia.Documentario => new Documentario(titolo, anno, genere, narratore),
-                    Tipologia.Animazione => new FilmAnimazione(titolo, anno, genere, studioAnimazione),
-                    Tipologia.Storico => new FilmStorico(titolo, anno, genere, regista),
-                    _ => throw new ArgumentException("Tipologia non riconosciuta")
-                };
-
+                Film nuovoFilm = _filmFactory.CreateFilm(tipologia, titolo, anno, genere, creatore, numeroEpisodi, numeroStagioni);
                 _filmService.AddFilm(nuovoFilm);
+                Response.Headers.Add("Cache-Control", "no-store");
                 return CreatedAtAction(nameof(Get), new { id = nuovoFilm.Titolo }, nuovoFilm);
+
             }
             catch (Exception ex)
             {
@@ -165,33 +154,16 @@ namespace WebApi.Controllers
                 int anno = filmData.GetProperty("anno").GetInt32();
                 string genere = filmData.GetProperty("genere").GetString();
                 string tipologiaString = filmData.GetProperty("tipologia").GetString();
+                Tipologia tipologia = Enum.Parse<Tipologia>(tipologiaString, true);
 
-                Tipologia tipologia;
-                if (!Enum.TryParse<Tipologia>(tipologiaString, true, out tipologia))
-                {
-                    return BadRequest("Tipologia non valida.");
-                }
+                string creatore = ControllerHelpers.ExtractCreator(filmData, tipologia);
+                int numeroEpisodi = filmData.TryGetProperty("numeroEpisodi", out var episodiValue) ? episodiValue.GetInt32() : 0;
+                int numeroStagioni = filmData.TryGetProperty("numeroStagioni", out var stagioniValue) ? stagioniValue.GetInt32() : 0;
 
-                // Estrapolazione delle proprietà comuni
-                string regista = filmData.TryGetProperty("regista", out var registaValue) ? registaValue.GetString() : null;
-                string narratore = filmData.TryGetProperty("narratore", out var narratoreValue) ? narratoreValue.GetString() : null;
-                string studioAnimazione = filmData.TryGetProperty("studioAnimazione", out var studioValue) ? studioValue.GetString() : null;
-
-                Film updatedFilm = tipologia switch
-                {
-                    Tipologia.Azione => new FilmAzione(titolo, anno, genere, regista),
-                    Tipologia.Commedia => new FilmCommedia(titolo, anno, genere, regista),
-                    Tipologia.Drammatico => new FilmDrammatico(titolo, anno, genere, regista),
-                    Tipologia.Fantascienza => new FilmFantascienza(titolo, anno, genere, regista),
-                    Tipologia.Horror => new FilmHorror(titolo, anno, genere, regista),
-                    Tipologia.Documentario => new Documentario(titolo, anno, genere, narratore),
-                    Tipologia.Animazione => new FilmAnimazione(titolo, anno, genere, studioAnimazione),
-                    Tipologia.Storico => new FilmStorico(titolo, anno, genere, regista),
-                    _ => throw new ArgumentException("Tipologia non riconosciuta")
-                };
-
+                Film updatedFilm = _filmFactory.CreateFilm(tipologia, titolo, anno, genere, creatore, numeroEpisodi, numeroStagioni);
                 if (_filmService.UpdateFilm(id, updatedFilm))
                 {
+                   // ControllerHelpers.SetCacheHeader(Response, 0);
                     return Ok(updatedFilm);
                 }
                 else
@@ -204,10 +176,6 @@ namespace WebApi.Controllers
                 return BadRequest($"Errore: {ex.Message}");
             }
         }
-
-
-
-
 
     }
 }

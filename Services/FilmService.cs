@@ -21,8 +21,8 @@ namespace WebApi.Services
 
         private void SetupLogging(bool isProduction)
         {
-            LogHelper.ConfigureLogging(isProduction);
-            _filmContainer.LogAction = LogHelper.Log; 
+            LogHelper.Instance.ConfigureLogging(isProduction);
+            _filmContainer.LogAction = LogHelper.Instance.Log;
         }
 
         private void InitializeFilms()
@@ -44,6 +44,22 @@ namespace WebApi.Services
             foreach (var film in _filmContainer.GetAllItems())
             {
                 string filmDetails = $"Film: {film.Titolo}, Anno: {film.Anno}, Genere: {film.Genere}";
+
+                // Aggiungi informazioni specifiche in base al tipo di film
+                if (film is IHasRegista registaFilm)
+                {
+                    filmDetails += $", Regista: {registaFilm.Regista}";
+                }
+                else if (film is Documentario documentario)
+                {
+                    filmDetails += $", Narratore: {documentario.Narratore}";
+                }
+                else if (film is FilmAnimazione animazione)
+                {
+                    filmDetails += $", Studio di Animazione: {animazione.StudioAnimazione}";
+                }
+
+
                 _filmContainer.LogAction?.Invoke(filmDetails);
             }
         }
@@ -77,19 +93,16 @@ namespace WebApi.Services
                 Tipologia = (int)f.Tipologia, 
                 Creatore = (f as IHasRegista)?.Regista ??
                            (f as Documentario)?.Narratore ??
-                           (f as FilmAnimazione)?.StudioAnimazione
+                           (f as FilmAnimazione)?.StudioAnimazione,
+                NumeroEpisodi = (f as SerieTV)?.NumeroEpisodi, // Aggiunto per SerieTV
+                NumeroStagioni = (f as SerieTV)?.NumeroStagioni // Aggiunto per SerieTV
             }).ToList();
         }
 
 
-
-
-
-
-
         public List<Film> GetFilmsByYear(int year)
         {
-            return _filmContainer.FindFilms(film => film.Anno > year);
+            return _filmContainer.FindFilms(film => film.Anno >= year);
         }
         
 

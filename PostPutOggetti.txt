@@ -1,0 +1,43 @@
+Serie TV
+
+{
+    "titolo": "Breaking Bad",
+    "anno": 2008,
+    "genere": "Crime, Drama",
+    "tipologia": "SerieTV",
+    "regista": "Vince Gilligan",
+    "numeroEpisodi": 62,
+    "numeroStagioni": 5
+}
+
+FILM
+
+{
+    "titolo": "Inception",
+    "anno": 2010,
+    "genere": "Fantascienza",
+    "tipologia": "Fantascienza",
+    "regista": "Christopher Nolan"
+}
+
+
+DOCUMENTARIO
+
+{
+    "titolo": "Planet Earth",
+    "anno": 2006,
+    "genere": "Documentario",
+    "tipologia": "Documentario",
+    "narratore": "David Attenborough"
+}
+
+
+FILM ANIMAZIONE
+
+{
+    "titolo": "Toy Story",
+    "anno": 1995,
+    "genere": "Animazione",
+    "tipologia": "Animazione",
+    "studioAnimazione": "Pixar Animation Studios" 
+}

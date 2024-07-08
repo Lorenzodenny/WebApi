@@ -7,5 +7,7 @@
         public string Genere { get; set; }
         public int Tipologia { get; set; }
         public string Creatore { get; set; } // Aggiunto per mostrare il creatore nel risultato sia su swagger che su endpoint normali
+        public int? NumeroEpisodi { get; set; } // Aggiunto per SerieTV
+        public int? NumeroStagioni { get; set; } // Aggiunto per SerieTV
     }
 }

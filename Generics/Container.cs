@@ -15,7 +15,7 @@ namespace WebApi.Generics
             return _items.FindAll(match);
         }
 
-        // Metodo che utilizza un Func<T, TResult>
+        // Metodo che utilizza un Func
         public List<TResult> ApplyFunction<TResult>(Func<T, TResult> func)
         {
             List<TResult> results = new List<TResult>();
